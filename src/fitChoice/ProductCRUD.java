@@ -1,32 +1,111 @@
 package fitChoice;
 
+import java.sql.SQLException;
+import java.util.ArrayList;
+
+import fitChoice.models.Products;
 import javafx.application.Application;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.geometry.*;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 
 public class ProductCRUD extends Application {
+    HBox topBar;
     VBox mainContainer;
     GridPane grid;
-    TableView<String> table;
+    Button logoutButton, addButton, updateButton, deleteButton;
+    TextField productNameField, productBrandField, productIngredientField, productNutrientField, categoryField;
+    TableView table;
+    ArrayList<Products> listProducts;
+    Connect connect = Connect.getInstance();
     BorderPane bp;
 
+    public static void main(String[] args) {
+        launch(args); // Launch the application
+    }
+
+    @Override
+    public void start(Stage stage) {
+        bp = new BorderPane();
+
+        Button logoutButton = new Button("Log Out");
+
+        // Navigation actions
+        logoutButton.setOnAction(event -> {
+            Main mainScreen = new Main();
+            try {
+                mainScreen.start(stage); // Navigate to Main class
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        // Pass buttons to the top bar
+        topBarContainer();
+
+        // Create main container
+        mainContainer = new VBox();
+        mainContainer.getChildren().addAll(productCRUDForm(), tableProduct()); // Form and table are stacked vertically
+        mainContainer.setSpacing(20);
+
+        // Add main container to BorderPane center
+        bp.setCenter(mainContainer);
+
+        Scene scene = new Scene(bp, 1000, 600);
+        stage.setScene(scene);
+        stage.setResizable(false);
+        stage.setTitle("Product CRUD");
+        stage.show();
+    }
+
+    public void addAction() {
+        addButton.setOnMouseClicked(e -> {
+            String productsName = productNameField.getText();
+            String productsBrand = productBrandField.getText();
+            String ingredients = productIngredientField.getText();
+            String nutrients = productNutrientField.getText();
+            String categories = categoryField.getText();
+
+            String productsID = Products.generateID();
+            insertData(productsID, productsName, productsBrand, ingredients, nutrients, categories);
+            refreshTable();
+        });
+
+        updateButton.setOnMouseClicked(e->{
+            Products selectedProduct = (Products)table.getSelectionModel().getSelectedItem();
+
+            String productsID = selectedProduct.getProductsID();
+            String productsName = productNameField.getText();
+            String productsBrand = productBrandField.getText();
+            String ingredients = productIngredientField.getText();
+            String nutrients = productNutrientField.getText();
+            String categories = categoryField.getText();
+
+            updateData(productsID, productsName, productsBrand, ingredients, nutrients, categories);
+            refreshTable();
+        });
+
+        deleteButton.setOnMouseClicked(e->{
+            Products selectedProduct = (Products)table.getSelectionModel().getSelectedItem();
+
+            String productsId = selectedProduct.getProductsID();
+            deleteData(productsId);
+            refreshTable();
+        });
+    }
+
     // Top bar with navigation buttons
-    public void topBarContainer(Button productButton, Button ingredientButton, Button nutrientButton, Button categoryButton, Button logoutButton) {
+    public void topBarContainer() {
         HBox topBar = new HBox(10);
         topBar.setPadding(new Insets(10));
         topBar.setStyle("-fx-background-color: #47663B;");
-
-        // Style buttons
-        String buttonStyle = "-fx-background-color: #F3F7EE; -fx-text-fill: #47663B; -fx-font-size: 14px; -fx-font-weight: bold;";
-        productButton.setStyle(buttonStyle);
-        ingredientButton.setStyle(buttonStyle);
-        nutrientButton.setStyle(buttonStyle);
-        categoryButton.setStyle(buttonStyle);
 
         logoutButton.setStyle("-fx-background-color: #FFFFFF; -fx-text-fill: #EA324C; -fx-font-size: 14px; -fx-font-weight: bold;");
 
@@ -35,7 +114,7 @@ public class ProductCRUD extends Application {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         // Add buttons and spacer to the topBar
-        topBar.getChildren().addAll(productButton, ingredientButton, nutrientButton, categoryButton, spacer, logoutButton);
+        topBar.getChildren().addAll(spacer, logoutButton);
 
         // Add the topBar to the BorderPane
         bp.setTop(topBar);
@@ -64,15 +143,9 @@ public class ProductCRUD extends Application {
         productBrandField.setPrefHeight(24);
 
         Label categoryLabel = new Label("Category:");
-        ComboBox<String> categoryDropdown = new ComboBox<>();
-        categoryDropdown.getItems().addAll("Category 1", "Category 2", "Category 3");
-        categoryDropdown.setPrefWidth(200);
-        categoryDropdown.setPrefHeight(24);
-
-        Label imageLabel = new Label("Product Image:");
-        Button uploadButton = new Button("Upload");
-        uploadButton.setPrefWidth(200);
-        uploadButton.setPrefHeight(24);
+        TextField categoryField = new TextField();
+        categoryField.setPrefWidth(400);
+        categoryField.setPrefHeight(64);
 
         Label productNutrientLabel = new Label("Product Nutrient:");
         TextField productNutrientField = new TextField();
@@ -98,9 +171,7 @@ public class ProductCRUD extends Application {
         grid.add(productBrandLabel, 1, 1);
         grid.add(productBrandField, 1, 2);
         grid.add(categoryLabel, 2, 1);
-        grid.add(categoryDropdown, 2, 2);
-        grid.add(imageLabel, 3, 1);
-        grid.add(uploadButton, 3, 2);
+        grid.add(categoryField, 2, 2);
         grid.add(productNutrientLabel, 0, 3);
         grid.add(productNutrientField, 0, 4, 2, 2);
         grid.add(productIngredientLabel, 2, 3);
@@ -115,20 +186,27 @@ public class ProductCRUD extends Application {
     // Table for displaying products
     public VBox tableProduct() {
         table = new TableView<>();
+        listProducts = new ArrayList<>();
 
         // Define columns
-        TableColumn<String, String> IDcolumn = new TableColumn<>("ID");
-        TableColumn<String, String> imageColumn = new TableColumn<>("Image");
-        TableColumn<String, String> nameColumn = new TableColumn<>("Name");
-        TableColumn<String, String> brandColumn = new TableColumn<>("Brand");
-        TableColumn<String, String> categoryColumn = new TableColumn<>("Category");
-        TableColumn<String, String> ingredientColumn = new TableColumn<>("Ingredient");
-        TableColumn<String, String> nutrientColumn = new TableColumn<>("Nutrient");
-        TableColumn<String, String> approvalColumn = new TableColumn<>("Approval");
-        TableColumn<String, String> commentColumn = new TableColumn<>("Comment");
+        TableColumn<Products, String> colProductsID = new TableColumn<>("productsID");
+        colProductsID.setCellValueFactory(new PropertyValueFactory<>("productsID"));
+        TableColumn<Products, String> colProductsName = new TableColumn<>("productsName");
+        colProductsName.setCellValueFactory(new PropertyValueFactory<>("productsName"));
+        TableColumn<Products, String> colProductsBrand = new TableColumn<>("productsBrand");
+        colProductsBrand.setCellValueFactory(new PropertyValueFactory<>("productsBrand"));
+        TableColumn<Products, String> colIngredients = new TableColumn<>("ingredients");
+        colIngredients.setCellValueFactory(new PropertyValueFactory<>("ingredients"));
+        TableColumn<Products, String> colNutrients = new TableColumn<>("nutrients");
+        colNutrients.setCellValueFactory(new PropertyValueFactory<>("nutrients"));
+        TableColumn<Products, String> colCategories = new TableColumn<>("categories");
+        colCategories.setCellValueFactory(new PropertyValueFactory<>("categories"));
 
         // Add columns to the table
-        table.getColumns().addAll(IDcolumn, imageColumn, nameColumn, brandColumn, categoryColumn, ingredientColumn, nutrientColumn, approvalColumn,commentColumn);
+        table.getColumns().addAll(colProductsID, colProductsName, colProductsBrand, colIngredients, colNutrients, colCategories);
+        ObservableList<Products> dataTabel = FXCollections.observableArrayList(listProducts);
+        table.setItems(dataTabel);
+        refreshTable();
 
         // Set column widths to fit the table evenly
         table.widthProperty().addListener((obs, oldWidth, newWidth) -> {
@@ -141,9 +219,9 @@ public class ProductCRUD extends Application {
         // Set column resize policy
         table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 
-        // Add some example data to test scrollbars
+        // Populate the ObservableList with Products objects
         for (int i = 0; i < 50; i++) {
-            table.getItems().add("Row " + i);
+            listProducts.add(new Products("ID" + i, "Product " + i, "Brand " + i, "Ingredients " + i, "Nutrients " + i, "Category " + i));
         }
 
         // Create VBox container for padding
@@ -153,74 +231,58 @@ public class ProductCRUD extends Application {
 
         return paddedTableContainer;
     }
+    private void getData() {
+        listProducts.clear();
 
-    @Override
-    public void start(Stage stage) {
-        bp = new BorderPane();
+        String query = "SELECT * from Products";
+        connect.rs = connect.execQuery(query);
 
-        // Define buttons
-        Button productButton = new Button("Product");
-        Button ingredientButton = new Button("Ingredient");
-        Button nutrientButton = new Button("Nutrient");
-        Button categoryButton = new Button("Category");
-        Button logoutButton = new Button("Log Out");
+        try {
+            while (connect.rs.next()) {
+                String productsID = connect.rs.getString("productsID");
+                String productsName = connect.rs.getString("productsName");
+                String productsBrand = connect.rs.getString("productsBrand");
+                String ingredients = connect.rs.getString("ingredients");
+                String nutrients = connect.rs.getString("nutrients");
+                String categories = connect.rs.getString("categories");
 
-        // Navigation actions
-        logoutButton.setOnAction(event -> {
-            Main mainScreen = new Main();
-            try {
-                mainScreen.start(stage); // Navigate to Main class
-            } catch (Exception e) {
-                e.printStackTrace();
+                listProducts.add(new Products(productsID,productsName,productsBrand,ingredients,nutrients,categories));
             }
-        });
+        } catch (SQLException e) {
+            // TODO: handle exception
+            e.printStackTrace();
+        }
 
-        ingredientButton.setOnAction(event -> {
-            IngredientCRUD ingredientCRUD = new IngredientCRUD();
-            try {
-                ingredientCRUD.start(stage); // Navigate to IngredientCRUD class
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-
-        nutrientButton.setOnAction(event -> {
-            NutrientCRUD nutrientCRUD = new NutrientCRUD();
-            try {
-                nutrientCRUD.start(stage); // Navigate to NutrientCRUD class
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-
-        categoryButton.setOnAction(event -> {
-            CategoryCRUD categoryCRUD = new CategoryCRUD();
-            try {
-                categoryCRUD.start(stage); // Navigate to CategoryCRUD class
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-
-        // Pass buttons to the top bar
-        topBarContainer(productButton, ingredientButton, nutrientButton, categoryButton, logoutButton);
-
-        // Create main container
-        mainContainer = new VBox();
-        mainContainer.getChildren().addAll(productCRUDForm(), tableProduct()); // Form and table are stacked vertically
-        mainContainer.setSpacing(20);
-
-        // Add main container to BorderPane center
-        bp.setCenter(mainContainer);
-
-        Scene scene = new Scene(bp, 1000, 600);
-        stage.setScene(scene);
-        stage.setResizable(false);
-        stage.setTitle("Product CRUD");
-        stage.show();
     }
 
-    public static void main(String[] args) {
-        launch(args); // Launch the application
+    //	Masukin array list ke tabel
+    private void refreshTable() {
+        getData();
+
+        productNameField.clear();
+        productBrandField.clear();
+        productIngredientField.clear();
+        productNutrientField.clear();
+        categoryField.clear();
+
+    }
+
+    //	Insert
+    private void insertData(String productsID, String productsName, String productsBrand, String categories, String ingredients, String nutrients) {
+        String query =
+                "INSERT INTO Products VALUES ('" +productsName +"','" +productsBrand +"','"+categories+"','"+ingredients+"','"+nutrients+"')";
+        connect.execUpdate(query);
+    }
+
+    //	Update
+    private void updateData(String productsID, String productsName, String productsBrand, String categories, String ingredients, String nutrients) {
+        String query = "UPDATE Products SET productsName = '" +productsName +"','" +productsBrand +"','"+categories+"','"+ingredients+"','"+nutrients+"'";
+        connect.execUpdate(query);
+    }
+
+    //	Delete
+    private void deleteData(String productsID) {
+        String query = "DELETE FROM Products WHERE nim = '"+productsID+"'";
+        connect.execUpdate(query);
     }
 }

@@ -7,6 +7,7 @@ module FitChoice {
     requires javafx.swing;
     requires javafx.web;
     requires javafx.media;
+    requires java.sql;
 
     opens fitChoice;
 }
