@@ -1,26 +1,39 @@
-package fitChoice.models;
+package fitChoice;
 
+import java.util.Random;
 import java.util.UUID;
 
 public class Products {
     private String productsID;
+    private String productsImage;
     private String productsName;
     private String productsBrand;
     private String categories;
     private String ingredients;
     private String nutrients;
+    private Enum approval;
+    private String comments;
 
-    public Products(String productsID, String productsName, String productsBrand, String categories, String ingredients, String nutrients) {
+    enum approval {
+        Waiting, Declined, High, Medium, Low
+    }
+
+    public static String generateID() {
+        Random random = new Random();
+        int randomNumber = random.nextInt(100000);
+        return String.format("PR%05d", randomNumber);
+    }
+
+    public Products(String productsID, String productsName, String productsImage, String productsBrand, String categories, String ingredients, String nutrients, Enum approval, String comments) {
         this.productsID = productsID;
+        this.productsImage = productsImage;
         this.productsName = productsName;
         this.productsBrand = productsBrand;
         this.categories = categories;
         this.ingredients = ingredients;
         this.nutrients = nutrients;
-    }
-
-    public static String generateID() {
-        return UUID.randomUUID().toString(); // Generates a unique ID
+        this.approval = approval;
+        this.comments = comments;
     }
 
     public String getProductsID() {
@@ -31,6 +44,14 @@ public class Products {
         this.productsID = productsID;
     }
 
+    public String getProductsImage() {
+        return productsImage;
+    }
+
+    public void setProductsImage(String productsImage) {
+        this.productsImage = productsImage;
+    }
+
     public String getProductsName() {
         return productsName;
     }
@@ -38,6 +59,7 @@ public class Products {
     public void setProductsName(String productsName) {
         this.productsName = productsName;
     }
+
 
     public String getProductsBrand() {
         return productsBrand;
@@ -47,11 +69,11 @@ public class Products {
         this.productsBrand = productsBrand;
     }
 
-    public String getcategories() {
+    public String getCategories() {
         return categories;
     }
 
-    public void setcategories(String categories) {
+    public void setCategories(String categories) {
         this.categories = categories;
     }
 
@@ -69,5 +91,21 @@ public class Products {
 
     public void setNutrients(String nutrients) {
         this.nutrients = nutrients;
+    }
+
+    public Enum getApproval() {
+        return approval;
+    }
+
+    public void setApproval(Enum approval) {
+        this.approval = approval;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 }

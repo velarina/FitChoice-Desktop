@@ -1,6 +1,8 @@
-package fitChoice.models;
+package fitChoice;
 
-public class Admin {
+import java.util.Random;
+
+public class Admins {
     private String adminID;
     private String adminName;
     private String adminEmail;
@@ -10,7 +12,14 @@ public class Admin {
     enum permission {
         adminProduct, adminRegistrations
     }
-    public Admin(String adminID, String adminName, String adminEmail, String password, Enum permission){
+
+    public static String generateID() {
+        Random random = new Random();
+        int randomNumber = random.nextInt(100000);
+        return String.format("AD%05d", randomNumber);
+    }
+
+    public Admins(String adminID, String adminName, String adminEmail, String password, Enum permission){
         this.adminID = adminID;
         this.adminName = adminName;
         this.adminEmail = adminEmail;

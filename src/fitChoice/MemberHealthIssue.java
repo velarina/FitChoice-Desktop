@@ -1,4 +1,4 @@
-package fitChoice.models;
+package fitChoice;
 
 public class MemberHealthIssue {
 

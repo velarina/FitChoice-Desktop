@@ -1,4 +1,6 @@
-package fitChoice.models;
+package fitChoice;
+
+import java.util.Random;
 
 public class Nutritionist {
 
@@ -10,6 +12,11 @@ public class Nutritionist {
     private String certification;
     private Integer yearsOfExperience;
 
+    public static String generateID() {
+        Random random = new Random();
+        int randomNumber = random.nextInt(100000);
+        return String.format("NU%05d", randomNumber);
+    }
     public Nutritionist(String nutritionistID, String nutritionistName, String nutritionistEmail, String password, String specialization, String certification, Integer yearsOfExperience) {
         this.nutritionistID = nutritionistID;
         this.nutritionistName = nutritionistName;
